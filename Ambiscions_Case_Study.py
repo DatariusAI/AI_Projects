@@ -73,8 +73,8 @@ st.title("Ambiscions - Case Study: Test Pilot App")
 col1, col2 = st.columns(2)
 
 # Generate QR Code for localhost
-local_url = "http://localhost:8503"
-local_qr = qrcode.make(local_url)
+url = "http://192.168.68.60:8503"
+local_qr = qrcode.make(url)
 local_qr_image = local_qr.resize((150, 150))  # Resize QR code
 
 # Generate QR Code for deployed URL
@@ -83,7 +83,7 @@ deployed_qr = qrcode.make(deployed_url)
 deployed_qr_image = deployed_qr.resize((150, 150))  # Resize QR code
 
 with col1:
-    st.image(local_qr_image, caption="Localhost URL QR Code")
+    st.image(local_qr_image, caption="URL QR Code")
 
 with col2:
     st.image(deployed_qr_image, caption="Deployed URL QR Code")
