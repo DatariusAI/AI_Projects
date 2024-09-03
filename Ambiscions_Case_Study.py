@@ -100,12 +100,12 @@ if is_qrcode_available:
     col1, col2 = st.columns(2)
 
     # Generate QR Code for localhost
-    local_url = "http://172.20.25.97:8501"
-    local_qr = qrcode.make(local_url)
+    url = "http://172.20.25.97:8501"
+    local_qr = qrcode.make(url)
     local_qr_image = local_qr.resize((150, 150))
 
     # Generate QR Code for deployed URL
-    deployed_url = "http://172.20.25.97:8501"  # Replace with your actual deployed URL
+    deployed_url = "https://kewlfunky2023-blank-app-ambiscions-case-study-teoy6m.streamlit.app/"  # Replace with your actual deployed URL
     deployed_qr = qrcode.make(deployed_url)
     deployed_qr_image = deployed_qr.resize((150, 150))
 
