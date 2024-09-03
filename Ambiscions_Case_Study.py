@@ -97,22 +97,16 @@ st.title("Ambiscions - Case Study: Test Pilot")
 # QR Code section
 if is_qrcode_available:
     st.header("Test Pilot App")
-    col1, col2 = st.columns(2)
-
-    # Generate QR Code for localhost
-    url = "http://172.20.25.97:8501"
-    local_qr = qrcode.make(url)
-    local_qr_image = local_qr.resize((150, 150))
 
     # Generate QR Code for deployed URL
     deployed_url = "https://kewlfunky2023-blank-app-ambiscions-case-study-teoy6m.streamlit.app/"  # Replace with your actual deployed URL
     deployed_qr = qrcode.make(deployed_url)
     deployed_qr_image = deployed_qr.resize((150, 150))
 
-    with col1:
-        st.image(local_qr_image, caption="Localhost URL QR Code")
+    # Center the QR code
+    col_center = st.columns([2, 1, 2])[1]  # Create a layout with three columns and select the center one
 
-    with col2:
+    with col_center:
         st.image(deployed_qr_image, caption="Deployed URL QR Code")
 
 # Descriptive Analysis if Matplotlib is available
