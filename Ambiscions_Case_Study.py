@@ -96,16 +96,16 @@ st.title("Ambiscions - Case Study: Test Pilot")
 
 # QR Code section
 if is_qrcode_available:
-    st.header("Access the Streamlit App")
+    st.header("Test Pilot App")
     col1, col2 = st.columns(2)
 
     # Generate QR Code for localhost
-    local_url = "http://localhost:8501"
+    local_url = "http://172.20.25.97:8501"
     local_qr = qrcode.make(local_url)
     local_qr_image = local_qr.resize((150, 150))
 
     # Generate QR Code for deployed URL
-    deployed_url = "https://your-deployed-url.com"  # Replace with your actual deployed URL
+    deployed_url = "http://172.20.25.97:8501"  # Replace with your actual deployed URL
     deployed_qr = qrcode.make(deployed_url)
     deployed_qr_image = deployed_qr.resize((150, 150))
 
