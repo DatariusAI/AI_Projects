@@ -1,5 +1,5 @@
 import streamlit as st
-from PyPDF2 import PdfReader  # Use PyPDF2 instead of fitz
+import pdfplumber  # Use pdfplumber instead of PyPDF2 or fitz
 from docx import Document
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
@@ -14,12 +14,12 @@ KEY_SKILLS = [
     "Analytical Thinking", "Problem Solving", "Teamwork", "Leadership"
 ]
 
-# Helper function for extracting text from PDFs using PyPDF2
+# Helper function for extracting text from PDFs using pdfplumber
 def extract_text_from_pdf(file):
-    pdf_reader = PdfReader(file)
     text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() or ""
     return text
 
 # Function for extracting text from .docx files
@@ -73,17 +73,4 @@ if resume_file is not None:
         min_font_size=10, max_font_size=100
     ).generate(filtered_text)
     
-    plt.figure(figsize=(12, 6))  # Increase figure size for better resolution
-    plt.imshow(wordcloud, interpolation="bilinear")
-    plt.axis("off")
-    st.pyplot(plt)
-
-    # Capture and display key data science keywords found in the resume
-    st.subheader("Captured Keywords for Data Scientist Role")
-    if found_keywords:
-        st.write(", ".join(found_keywords))
-    else:
-        st.write("No key data science skills found. Consider adding relevant skills to enhance relevance.")
-
-else:
-    st.info("Please upload a resume to analyze.")
+    plt.figure(figsize=(
