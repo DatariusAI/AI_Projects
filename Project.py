@@ -1,5 +1,5 @@
 import streamlit as st
-import pdfplumber  # Use pdfplumber instead of PyPDF2 or fitz
+import pdfplumber  # Use pdfplumber for PDF handling
 from docx import Document
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
@@ -72,5 +72,18 @@ if resume_file is not None:
         stopwords=stopwords, max_words=30, contour_width=1, contour_color='steelblue',
         min_font_size=10, max_font_size=100
     ).generate(filtered_text)
-    
-    plt.figure(figsize=(
+
+    plt.figure(figsize=(12, 6))  # Increased figure size for better resolution
+    plt.imshow(wordcloud, interpolation="bilinear")
+    plt.axis("off")
+    st.pyplot(plt)
+
+    # Capture and display key data science keywords found in the resume
+    st.subheader("Captured Keywords for Data Scientist Role")
+    if found_keywords:
+        st.write(", ".join(found_keywords))
+    else:
+        st.write("No key data science skills found. Consider adding relevant skills to enhance relevance.")
+
+else:
+    st.info("Please upload a resume to analyze.")
