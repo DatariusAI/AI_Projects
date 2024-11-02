@@ -1,5 +1,6 @@
 import streamlit as st
-import pdfplumber  # Use pdfplumber for PDF handling
+from PyPDF2 import PdfReader
+import pdfplumber
 from docx import Document
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
@@ -14,13 +15,33 @@ KEY_SKILLS = [
     "Analytical Thinking", "Problem Solving", "Teamwork", "Leadership"
 ]
 
-# Helper function for extracting text from PDFs using pdfplumber
+# Helper function for extracting text from PDFs with error handling
 def extract_text_from_pdf(file):
     text = ""
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages:
+    
+    # First attempt with pdfplumber
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() or ""
+        return text
+
+    except Exception as e:
+        # Log the error for debugging purposes (in production, you might log this differently)
+        print(f"pdfplumber failed: {e}")
+    
+    # Fallback to PyPDF2 if pdfplumber fails
+    try:
+        pdf_reader = PdfReader(file)
+        for page in pdf_reader.pages:
             text += page.extract_text() or ""
-    return text
+        return text
+
+    except Exception as e:
+        # If both libraries fail, return an error message
+        st.error("Failed to extract text from the PDF. The file might be corrupted or unsupported.")
+        print(f"PyPDF2 also failed: {e}")
+        return ""
 
 # Function for extracting text from .docx files
 def extract_text_from_docx(file):
@@ -57,33 +78,36 @@ if resume_file is not None:
         st.stop()
     
     # Display uploaded resume content
-    st.write("Uploaded Resume Content:")
-    st.write(resume_text)
+    if resume_text:
+        st.write("Uploaded Resume Content:")
+        st.write(resume_text)
 
-    # Filter resume content to include only relevant keywords for word cloud
-    found_keywords = capture_keywords(resume_text, KEY_SKILLS)
-    filtered_text = " ".join(found_keywords)  # Only include captured keywords
+        # Filter resume content to include only relevant keywords for word cloud
+        found_keywords = capture_keywords(resume_text, KEY_SKILLS)
+        filtered_text = " ".join(found_keywords)  # Only include captured keywords
 
-    # Generate and display refined word cloud
-    st.subheader("Refined Word Cloud of Relevant Data Science Keywords")
-    stopwords = set(STOPWORDS)
-    wordcloud = WordCloud(
-        width=1000, height=500, background_color="white", colormap="viridis",
-        stopwords=stopwords, max_words=30, contour_width=1, contour_color='steelblue',
-        min_font_size=10, max_font_size=100
-    ).generate(filtered_text)
+        # Generate and display refined word cloud
+        st.subheader("Refined Word Cloud of Relevant Data Science Keywords")
+        stopwords = set(STOPWORDS)
+        wordcloud = WordCloud(
+            width=1000, height=500, background_color="white", colormap="viridis",
+            stopwords=stopwords, max_words=30, contour_width=1, contour_color='steelblue',
+            min_font_size=10, max_font_size=100
+        ).generate(filtered_text)
 
-    plt.figure(figsize=(12, 6))  # Increased figure size for better resolution
-    plt.imshow(wordcloud, interpolation="bilinear")
-    plt.axis("off")
-    st.pyplot(plt)
+        plt.figure(figsize=(12, 6))  # Increased figure size for better resolution
+        plt.imshow(wordcloud, interpolation="bilinear")
+        plt.axis("off")
+        st.pyplot(plt)
 
-    # Capture and display key data science keywords found in the resume
-    st.subheader("Captured Keywords for Data Scientist Role")
-    if found_keywords:
-        st.write(", ".join(found_keywords))
+        # Capture and display key data science keywords found in the resume
+        st.subheader("Captured Keywords for Data Scientist Role")
+        if found_keywords:
+            st.write(", ".join(found_keywords))
+        else:
+            st.write("No key data science skills found. Consider adding relevant skills to enhance relevance.")
     else:
-        st.write("No key data science skills found. Consider adding relevant skills to enhance relevance.")
+        st.warning("No text could be extracted from the uploaded file. Please check the file format or content.")
 
 else:
     st.info("Please upload a resume to analyze.")
