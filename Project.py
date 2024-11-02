@@ -1,5 +1,5 @@
 import streamlit as st
-import fitz  # PyMuPDF for PDF handling
+from PyPDF2 import PdfReader  # Use PyPDF2 instead of fitz
 from docx import Document
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
@@ -14,15 +14,15 @@ KEY_SKILLS = [
     "Analytical Thinking", "Problem Solving", "Teamwork", "Leadership"
 ]
 
-# Helper functions for extracting text from different file formats
+# Helper function for extracting text from PDFs using PyPDF2
 def extract_text_from_pdf(file):
+    pdf_reader = PdfReader(file)
     text = ""
-    pdf = fitz.open(stream=file.read(), filetype="pdf")
-    for page in pdf:
-        text += page.get_text()
-    pdf.close()
+    for page in pdf_reader.pages:
+        text += page.extract_text()
     return text
 
+# Function for extracting text from .docx files
 def extract_text_from_docx(file):
     doc = Document(file)
     return "\n".join([para.text for para in doc.paragraphs])
