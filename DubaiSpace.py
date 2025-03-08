@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 import random
+from pathlib import Path
 
 # App Configurations
 st.set_page_config(page_title="Dubai Space Travel Booking", layout="wide")
@@ -46,14 +47,35 @@ elif menu == "Dashboard":
     st.write("View your upcoming and past space travel bookings.")
     countdown = datetime.datetime(2025, 6, 1) - datetime.datetime.now()
     st.write(f"🚀 Next Launch Countdown: {countdown.days} days")
-    st.write("Upcoming Trip: Dubai → ISS on June 1, 2025, in VIP Zero-Gravity class.")
+    
+    st.markdown("### Your Upcoming Trips")
+    trips = [
+        {"date": "2025-06-01", "destination": "ISS", "seat_class": "VIP Zero-Gravity"},
+        {"date": "2025-08-15", "destination": "Lunar Hotel", "seat_class": "Luxury"}
+    ]
+    for trip in trips:
+        st.write(f"🛰️ {trip['date']} - {trip['destination']} ({trip['seat_class']})")
+    
+    st.markdown("### Travel Rewards")
+    st.write("⭐ You have **3,000 SpaceMiles** available for discounts on future trips!")
 
 elif menu == "AI Travel Assistant":
     st.subheader("🤖 AI-Powered Travel Recommendations")
-    user_pref = st.text_input("Tell us about your space travel preferences:")
+    user_pref = st.text_area("Tell us about your space travel preferences:")
+    
+    def local_ai_response(query):
+        responses = {
+            "luxury": "AI suggests Lunar Hotel for a premium stay experience!",
+            "cheap": "AI recommends an affordable stay in the Orbital Space Station!",
+            "fast": "AI suggests the next express trip to ISS!"
+        }
+        for key, value in responses.items():
+            if key in query.lower():
+                return value
+        return "AI suggests an exciting adventure based on your input!"
+    
     if st.button("Get Recommendations"):
-        st.write("🔍 Analyzing... ✅ AI suggests Lunar Hotel for a premium stay experience!")
-        st.image("https://source.unsplash.com/400x300/?moon,spacehotel")
+        st.write("🔍 Analyzing... ✅ " + local_ai_response(user_pref))
 
 # Footer
 st.markdown("---")
