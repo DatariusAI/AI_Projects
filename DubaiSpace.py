@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import random
-import openai
+import requests
 
 def generate_price(seat_class):
     base_price = 500000  # Base price in USD
@@ -11,12 +11,12 @@ def generate_price(seat_class):
 
 def get_ai_travel_tip():
     try:
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt="Give me a futuristic space travel tip.",
-            max_tokens=50
-        )
-        return response["choices"][0]["text"].strip()
+        response = requests.get("https://api.quotable.io/random?tags=science,technology")
+        if response.status_code == 200:
+            data = response.json()
+            return data["content"]
+        else:
+            return "AI is unavailable. Try again later."
     except Exception as e:
         return "AI is unavailable. Try again later."
 
