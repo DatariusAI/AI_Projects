@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import random
 import requests
+from transformers import pipeline
 
 def generate_price(seat_class):
     base_price = 500000  # Base price in USD
@@ -11,12 +12,9 @@ def generate_price(seat_class):
 
 def get_ai_travel_tip():
     try:
-        response = requests.get("https://api.quotable.io/random?tags=science,technology")
-        if response.status_code == 200:
-            data = response.json()
-            return data["content"]
-        else:
-            return "AI is unavailable. Try again later."
+        generator = pipeline("text-generation", model="HuggingFaceH4/zephyr-7b-alpha")
+        response = generator("Provide a futuristic space travel tip.", max_length=50)
+        return response[0]["generated_text"].strip()
     except Exception as e:
         return "AI is unavailable. Try again later."
 
