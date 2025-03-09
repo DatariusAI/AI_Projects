@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import random
-import openai
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage
+from transformers import pipeline
 
 # ---- Helper Functions ---- #
 def generate_price(seat_class):
@@ -14,15 +11,15 @@ def generate_price(seat_class):
     multipliers = {'Economy': 1, 'Luxury': 2, 'VIP Zero-Gravity': 3.5}
     return base_price * multipliers.get(seat_class, 1)
 
-# ---- AI Chatbot Using Langchain & Free Model ---- #
+# ---- AI Chatbot Using Free Hugging Face Model ---- #
 def get_ai_travel_tip():
-    """Generate an AI travel tip without API costs."""
+    """Generate an AI travel tip using a free model."""
     try:
-        model = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.7)
-        response = model([HumanMessage(content="Provide a futuristic space travel tip.")])
-        return response.content.strip()
-    except Exception:
-        return "AI Assistant is currently unavailable. Try again later."
+        generator = pipeline("text-generation", model="tiiuae/falcon-7b-instruct", device=-1)  # Use CPU
+        response = generator("Provide a futuristic space travel tip.", max_length=50)
+        return response[0]["generated_text"].strip()
+    except Exception as e:
+        return f"AI Assistant error: {str(e)}"
 
 # ---- Streamlit UI ---- #
 st.set_page_config(page_title="Dubai Space Travel", layout="wide")
