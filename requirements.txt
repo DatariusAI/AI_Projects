@@ -22,5 +22,5 @@ openai
 transformers
 langchain
 torch
-
+langchain-community
 
