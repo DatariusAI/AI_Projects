@@ -20,6 +20,7 @@ matplotlib          # For creating and displaying the word cloud plot
 wordcloud           # For generating the word cloud
 openai
 transformers
+langchain
 torch
 
 
