@@ -10,27 +10,36 @@ def generate_price(seat_class):
     multipliers = {'Economy': 1, 'Luxury': 2, 'VIP Zero-Gravity': 3.5}
     return base_price * multipliers[seat_class]
 
-# ---- AI Travel Tip Alternative ---- #
-def get_ai_travel_tip():
-    """Provide a text-based travel tip if AI is unavailable."""
-    return (
-        "The United Arab Emirates has established itself as a global leader in space exploration, "
-        "thanks to the visionary leadership of its rulers. The Mohammed bin Rashid Space Centre (MBRSC) "
-        "has spearheaded numerous ambitious projects, including the historic Emirates Mars Mission, which placed "
-        "the Hope Probe into orbit around the Red Planet. This remarkable achievement has cemented Dubai’s position "
-        "in the space industry, pushing the boundaries of innovation and technology.\n\n"
-        "Under the guidance of His Highness Sheikh Mohammed bin Rashid Al Maktoum and His Highness Sheikh Mohamed bin Zayed Al Nahyan, "
-        "Dubai continues to push forward in making commercial space travel accessible to all. With ongoing developments "
-        "in space tourism, research, and interplanetary travel, the UAE is setting new standards in aerospace innovation.\n\n"
-        "Our commercial space flights offer state-of-the-art spacecraft designed with passenger comfort and safety as the top priority. "
-        "Flights to the International Space Station, the Lunar Hotel, and even Mars are equipped with advanced life-support systems, "
-        "artificial gravity modules, and panoramic observation decks. Whether you choose our Economy, Luxury, or VIP Zero-Gravity "
-        "packages, you will experience the finest space travel services.\n\n"
-        "The UAE’s commitment to space exploration is further solidified by the ambitious Mars 2117 project, aiming to establish "
-        "a sustainable human colony on Mars. The Emirates Lunar Mission is also progressing rapidly, with a focus on developing "
-        "lunar habitats for long-term space habitation. These initiatives ensure that the UAE remains a dominant force in the "
-        "future of space travel, bringing the dream of interplanetary tourism closer to reality."
-    )
+# ---- AI Travel Assistant with Dynamic Options ---- #
+def get_ai_travel_tip(option):
+    tips = {
+        "UAE's Space Vision": (
+            "The United Arab Emirates has positioned itself as a leader in space exploration under the visionary guidance "
+            "of His Highness Sheikh Mohammed bin Rashid Al Maktoum and His Highness Sheikh Mohamed bin Zayed Al Nahyan. "
+            "Through the Mohammed bin Rashid Space Centre (MBRSC), the UAE has launched groundbreaking projects, including "
+            "the Emirates Mars Mission and the Mars 2117 initiative, paving the way for interplanetary human settlement. "
+            "With continued investment in research and technology, the UAE remains at the forefront of space innovation."
+        ),
+        "Space Travel Experience": (
+            "Embarking on a space journey from Dubai is a once-in-a-lifetime experience. Our commercial flights offer "
+            "unparalleled luxury and safety, featuring panoramic observation decks, artificial gravity sections, and "
+            "Michelin-starred cuisine tailored for zero gravity. Whether you're heading to the International Space Station, "
+            "the Lunar Hotel, or Mars, expect an extraordinary voyage with trained astronauts guiding you every step of the way."
+        ),
+        "Safety & Training": (
+            "Dubai Space Travel prioritizes safety with cutting-edge spacecraft and rigorous training programs. "
+            "Before your journey, you will undergo zero-gravity training and a full health assessment to ensure your "
+            "readiness. Our state-of-the-art life-support systems and emergency protocols make space travel safer than ever, "
+            "allowing you to explore the cosmos with confidence."
+        ),
+        "Upcoming Missions": (
+            "The UAE is set to launch several ambitious missions, including lunar surface exploration and deep-space probes. "
+            "The Emirates Lunar Mission will see the deployment of robotic rovers, while Mars 2117 aims to establish a "
+            "permanent human colony on the Red Planet. These projects not only enhance scientific knowledge but also "
+            "prepare humanity for the next frontier of space habitation."
+        )
+    }
+    return tips.get(option, "Please select a topic to learn more about Dubai's space travel initiatives.")
 
 # ---- Streamlit UI ---- #
 st.title("🚀 Dubai to the Stars – Space Travel Booking Platform")
@@ -76,9 +85,13 @@ elif menu == "My Dashboard":
 elif menu == "AI Travel Assistant":
     st.header("🤖 AI Space Travel Assistant")
     
-    if st.button("Get AI Travel Tip 🛰️"):
-        ai_tip = get_ai_travel_tip()
+    option = st.selectbox("Choose a topic:", ["Select", "UAE's Space Vision", "Space Travel Experience", "Safety & Training", "Upcoming Missions"])
+    
+    if st.button("Get AI Travel Tip 🛰️") and option != "Select":
+        ai_tip = get_ai_travel_tip(option)
         st.info(ai_tip)
+    elif option == "Select":
+        st.warning("Please select a topic to get more information.")
     
 elif menu == "About":
     st.header("🌌 About the Platform")
