@@ -23,4 +23,6 @@ transformers
 langchain
 torch
 langchain-community
+openpyxl
+
 
