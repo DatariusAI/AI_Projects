@@ -32,5 +32,15 @@ faiss-cpu
 torch
 pandas
 nltk
+streamlit
+sentence-transformers
+transformers
+scikit-learn
+faiss-cpu
+torch
+pandas
+nltk
+protobuf
+
 
 
