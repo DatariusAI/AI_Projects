@@ -28,6 +28,8 @@ streamlit
 sentence-transformers
 transformers
 scikit-learn
+sentencepiece
+
 faiss-cpu
 torch
 pandas
