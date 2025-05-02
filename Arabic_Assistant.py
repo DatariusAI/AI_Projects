@@ -3,14 +3,13 @@ from transformers import pipeline, MarianMTModel, MarianTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics.pairwise import cosine_similarity
-from camel_tools.sentiment import SentimentAnalyzer
 import nltk
 
-# Download nltk
+# Download nltk resources
 nltk.download('punkt')
 
 # ---------------------------
-# Knowledge Base + TF-IDF
+# Knowledge Base + TF-IDF (RAG)
 # ---------------------------
 kb = ["الذكاء الاصطناعي هو فرع من علوم الحاسوب",
       "تعلم الآلة هو جزء من الذكاء الاصطناعي",
@@ -38,12 +37,19 @@ def translate(text):
     return mt_tokenizer.decode(translated[0], skip_special_tokens=True)
 
 # ---------------------------
-# Sentiment Analysis (camel-tools)
+# Simple Sentiment Analysis (Rule-based)
 # ---------------------------
-sentiment_analyzer = SentimentAnalyzer.pretrained()
+positive_words = ["سعيد", "ممتاز", "جميل", "رائع", "مبسوط", "جيد", "مسرور"]
+negative_words = ["حزين", "سيء", "كئيب", "ممل", "غاضب", "مضطرب"]
 
 def simple_sentiment(text):
-    return sentiment_analyzer.predict(text)
+    text = text.lower()
+    if any(word in text for word in positive_words):
+        return "إيجابي"
+    elif any(word in text for word in negative_words):
+        return "سلبي"
+    else:
+        return "محايد"
 
 # ---------------------------
 # Dialect Identification
@@ -64,12 +70,12 @@ def detect_dialect(text):
 summarizer = pipeline("summarization", model="csebuetnlp/mT5_multilingual_XLSum")
 
 # ---------------------------
-# Streamlit UI
+# Streamlit App
 # ---------------------------
 st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖")
 st.title("🤖 المساعد العربي الذكي")
 
-st.write("اكتب سؤالك أو طلبك في المربع أدناه:")
+st.write("أهلاً بك في المساعد العربي الذكي. اكتب طلبك أو سؤالك:")
 
 user_input = st.text_input("اكتب هنا:")
 
