@@ -24,5 +24,13 @@ langchain
 torch
 langchain-community
 openpyxl
+streamlit
+sentence-transformers
+transformers
+scikit-learn
+faiss-cpu
+torch
+pandas
+nltk
 
 
