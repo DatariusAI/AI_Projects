@@ -6,16 +6,17 @@ import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.naive_bayes import MultinomialNB
+from langdetect import detect
 import time
 
-# Try to download nltk data, but with a fallback
+# Download NLTK punkt tokenizer
 try:
     nltk.download('punkt', quiet=True)
 except:
-    pass  # Silently continue if download fails
+    pass
 
 # ---------------------------
-# Knowledge Base (Expand this with more entries for better coverage)
+# Knowledge Base
 # ---------------------------
 kb = [
     "الذكاء الاصطناعي هو فرع من علوم الحاسوب يهتم بإنشاء آلات ذكية يمكنها التفكير والتعلم كالبشر",
@@ -30,317 +31,171 @@ kb = [
     "الواقع الافتراضي يخلق بيئة محاكاة يمكن للمستخدمين التفاعل معها بطريقة تبدو حقيقية"
 ]
 
-# Initialize TF-IDF for RAG
-try:
+# Cache the TF-IDF vectorizer and vectors
+@st.cache_resource(show_spinner=False)
+def load_vectorizer_and_kb():
     vectorizer = TfidfVectorizer()
     kb_vectors = vectorizer.fit_transform(kb)
-except Exception as e:
-    st.error(f"Error initializing TF-IDF: {e}")
+    return vectorizer, kb_vectors
+
+vectorizer, kb_vectors = load_vectorizer_and_kb()
 
 # ---------------------------
-# External Translation API
+# Translation API with Auto-Detect
 # ---------------------------
 def translate_text(text, target_language="en"):
-    """
-    Translate text using LibreTranslate API which is free and open-source
-    """
     try:
-        # Use LibreTranslate's public API (free but may have limitations)
-        url = "https://libretranslate.de/translate"
+        source_lang = detect(text)
+        if source_lang == target_language:
+            return text  # No need to translate
         
+        url = "https://libretranslate.de/translate"
         payload = {
             "q": text,
-            "source": "ar",
+            "source": source_lang,
             "target": target_language,
             "format": "text"
         }
-        
         response = requests.post(url, data=payload)
         if response.status_code == 200:
             return response.json()["translatedText"]
         else:
-            # Fallback to dictionary for common phrases
-            if text in translations:
-                return translations[text]
-            return f"Translation API error: {response.status_code}"
+            return f"Translation failed: {response.status_code}"
     except Exception as e:
-        # Fallback to dictionary
-        if text in translations:
-            return translations[text]
-        return f"Translation error: {str(e)}"
-
-# Fallback translation dictionary
-translations = {
-    "مرحبا": "Hello",
-    "كيف حالك": "How are you",
-    "شكرا": "Thank you",
-    "الذكاء الاصطناعي": "Artificial Intelligence",
-    "تعلم الآلة": "Machine Learning",
-    "معالجة اللغة الطبيعية": "Natural Language Processing",
-    "البيانات الضخمة": "Big Data",
-    "إنترنت الأشياء": "Internet of Things",
-    "الحوسبة السحابية": "Cloud Computing",
-    "الأمن السيبراني": "Cybersecurity"
-}
+        return f"Translation error: {e}"
 
 # ---------------------------
-# Advanced Summarization Using TextRank Algorithm
+# Summarization (TextRank and fallback)
 # ---------------------------
 def summarize_text(text, num_sentences=3):
     try:
         from sumy.parsers.plaintext import PlaintextParser
         from sumy.nlp.tokenizers import Tokenizer
         from sumy.summarizers.lex_rank import LexRankSummarizer
-        
+
         parser = PlaintextParser.from_string(text, Tokenizer("arabic"))
         summarizer = LexRankSummarizer()
         summary = summarizer(parser.document, num_sentences)
-        
-        if summary:
-            return " ".join([str(sentence) for sentence in summary])
-        else:
-            return basic_summarizer(text)
-    except Exception as e:
-        # Fallback to basic summarizer
+
+        return " ".join([str(sentence) for sentence in summary]) or basic_summarizer(text)
+
+    except Exception:
         return basic_summarizer(text)
 
-# Basic summarizer as fallback
 def basic_summarizer(text, max_words=30):
     words = text.split()
-    if len(words) <= max_words:
-        return text
-    return " ".join(words[:max_words]) + "..."
+    return " ".join(words[:max_words]) + "..." if len(words) > max_words else text
 
 # ---------------------------
-# Enhanced Sentiment Analysis
+# Sentiment Analysis
 # ---------------------------
-# Expanded word lists for better sentiment detection
-positive_words = [
-    "سعيد", "ممتاز", "جميل", "رائع", "مبسوط", "جيد", "مسرور", "رضا", "فرح", "حب",
-    "نجاح", "إنجاز", "متفائل", "أمل", "مستمتع", "مبتهج", "متحمس", "ناجح", "محبوب",
-    "مقدر", "متألق", "مثير", "ودود", "مريح", "مرضي", "عظيم", "مشجع", "محفز"
-]
-
-negative_words = [
-    "حزين", "سيء", "كئيب", "ممل", "غاضب", "مضطرب", "قلق", "خائف", "محبط", "متعب",
-    "فاشل", "مؤلم", "مخيف", "صعب", "مزعج", "مرهق", "مضايق", "متضايق", "محرج",
-    "مهموم", "مشوش", "متوتر", "يائس", "مخيب", "مهدد", "مستاء", "متضرر", "محزن"
-]
+positive_words = ["سعيد", "ممتاز", "جميل", "رائع", "مبتهج", "حب", "نجاح"]
+negative_words = ["حزين", "سيء", "غاضب", "ممل", "قلق", "محبط", "متعب"]
 
 def analyze_sentiment(text):
-    """Enhanced sentiment analysis with more terms and better scoring"""
     text = text.lower()
-    
-    # Count occurrences of positive and negative words
-    pos_count = sum(1 for word in positive_words if word in text)
-    neg_count = sum(1 for word in negative_words if word in text)
-    
-    # Determine sentiment based on count
-    if pos_count > neg_count:
-        confidence = min(100, int((pos_count / (pos_count + neg_count + 0.1)) * 100))
-        return f"إيجابي (ثقة: {confidence}%)"
-    elif neg_count > pos_count:
-        confidence = min(100, int((neg_count / (pos_count + neg_count + 0.1)) * 100))
-        return f"سلبي (ثقة: {confidence}%)"
-    else:
-        return "محايد"
+    pos = sum(word in text for word in positive_words)
+    neg = sum(word in text for word in negative_words)
+
+    if pos > neg:
+        return f"إيجابي (ثقة: {int((pos / (pos + neg + 0.1)) * 100)}%)"
+    elif neg > pos:
+        return f"سلبي (ثقة: {int((neg / (pos + neg + 0.1)) * 100)}%)"
+    return "محايد"
 
 # ---------------------------
-# Improved Dialect Identification
+# Dialect Detection
 # ---------------------------
-dialect_texts = [
-    # Egyptian dialect examples
-    "إزيك عامل إيه؟", "أنا مش عارف", "دلوقتي", "عايز", "بص كدا", "ماشي", 
-    # Gulf dialect examples
-    "شلونك اليوم؟", "يبغالي", "وش فيك", "وينك؟", "من وين؟", "طيب",
-    # Levantine dialect examples
-    "كيفك شو الأخبار؟", "بدي روح", "هيك", "منيح", "حكي", "بكرا"
-]
+dialect_texts = ["إزيك عامل إيه؟", "شلونك اليوم؟", "كيفك شو الأخبار؟"]
+dialect_labels = ["مصرية", "خليجية", "شامية"]
 
-dialect_labels = [
-    "مصرية", "مصرية", "مصرية", "مصرية", "مصرية", "مصرية",
-    "خليجية", "خليجية", "خليجية", "خليجية", "خليجية", "خليجية",
-    "شامية", "شامية", "شامية", "شامية", "شامية", "شامية"
-]
+@st.cache_resource(show_spinner=False)
+def train_dialect_model():
+    vec = TfidfVectorizer(ngram_range=(1, 3))
+    X = vec.fit_transform(dialect_texts)
+    clf = MultinomialNB()
+    clf.fit(X, dialect_labels)
+    return vec, clf
 
-try:
-    dialect_vectorizer = TfidfVectorizer(ngram_range=(1, 3))
-    X = dialect_vectorizer.fit_transform(dialect_texts)
-    dialect_clf = MultinomialNB()
-    dialect_clf.fit(X, dialect_labels)
-except Exception as e:
-    st.error(f"Error initializing dialect classifier: {e}")
+dialect_vectorizer, dialect_clf = train_dialect_model()
 
 def detect_dialect(text):
-    """Detect Arabic dialect with confidence score"""
     try:
         text_vec = dialect_vectorizer.transform([text])
-        predicted_dialect = dialect_clf.predict(text_vec)[0]
-        proba = max(dialect_clf.predict_proba(text_vec)[0])
-        confidence = int(proba * 100)
-        return f"{predicted_dialect} (ثقة: {confidence}%)"
+        pred = dialect_clf.predict(text_vec)[0]
+        confidence = max(dialect_clf.predict_proba(text_vec)[0])
+        return f"{pred} (ثقة: {int(confidence * 100)}%)"
     except:
-        # If classification fails, do basic keyword matching
-        text = text.lower()
-        if any(word in text for word in ["إزاي", "إزيك", "كده", "دلوقتي", "عايز"]):
-            return "مصرية (تخمين بسيط)"
-        elif any(word in text for word in ["شلون", "يبغى", "وش", "وين"]):
-            return "خليجية (تخمين بسيط)"
-        elif any(word in text for word in ["كيف", "هيك", "بدي", "منيح"]):
-            return "شامية (تخمين بسيط)"
         return "غير معروفة"
 
 # ---------------------------
-# Enhanced RAG for Knowledge Retrieval
+# Knowledge Retrieval (RAG)
 # ---------------------------
 def knowledge_retrieval(query, top_k=2):
-    """Retrieve the most relevant information from knowledge base"""
-    try:
-        query_vec = vectorizer.transform([query])
-        similarity_scores = cosine_similarity(query_vec, kb_vectors)[0]
-        
-        # Get the indices of top_k most similar documents
-        top_indices = similarity_scores.argsort()[-top_k:][::-1]
-        
-        if similarity_scores[top_indices[0]] > 0.1:  # Threshold for relevance
-            results = [kb[i] for i in top_indices]
-            return "\n\n".join(results)
-        else:
-            # If no good match, generate a response
-            return "لا يوجد معلومات كافية في قاعدة المعرفة. يرجى إعادة صياغة سؤالك."
-    except Exception as e:
-        return f"حدث خطأ في البحث: {str(e)}"
+    query_vec = vectorizer.transform([query])
+    scores = cosine_similarity(query_vec, kb_vectors)[0]
+    top_indices = scores.argsort()[-top_k:][::-1]
+
+    if scores[top_indices[0]] > 0.1:
+        return "\n\n".join([kb[i] for i in top_indices])
+    return "لا يوجد معلومات كافية."
 
 # ---------------------------
-# Streamlit UI with Chat Interface
+# Streamlit App
 # ---------------------------
-def main():
-    st.set_page_config(
-        page_title="المساعد العربي الذكي", 
-        page_icon="🤖",
-        layout="wide"
-    )
-    
-    st.title("🤖 المساعد العربي الذكي")
-    
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    
-    # Display chat messages from history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    
-    # Accept user input
-    if prompt := st.chat_input("أكتب رسالتك هنا..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # Display user message in chat container
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        # Display assistant response in chat container
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            message_placeholder.markdown("⏳ جاري التفكير...")
-            
-            # Process the request
-            response = process_request(prompt)
-            
-            # Update with the full response
-            message_placeholder.markdown(response)
-            
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖", layout="wide")
+st.title("🤖 المساعد العربي الذكي")
 
-    # Sidebar with examples and information
-    with st.sidebar:
-        st.header("🌟 ميزات المساعد")
-        st.markdown("""
-        **المساعد العربي الذكي** يمكنه:
-        
-        * 🔤 الترجمة من العربية إلى الإنجليزية
-        * 📝 تلخيص النصوص العربية
-        * 🧠 تحليل المشاعر في النص
-        * 🗣️ التعرف على اللهجات العربية
-        * 💡 الإجابة على الأسئلة من قاعدة المعرفة
-        """)
-        
-        st.header("🔍 أمثلة للاستخدام")
-        example1 = "ترجم الذكاء الاصطناعي يغير العالم بسرعة كبيرة"
-        example2 = "ما هو الذكاء الاصطناعي؟"
-        example3 = "حلل مشاعر أنا سعيد جدا بهذا التطبيق الرائع"
-        example4 = "ما هي لهجة كيفك شو الأخبار؟"
-        
-        if st.button("ترجمة نص"):
-            st.session_state.messages.append({"role": "user", "content": example1})
-        
-        if st.button("سؤال عن الذكاء الاصطناعي"):
-            st.session_state.messages.append({"role": "user", "content": example2})
-            
-        if st.button("تحليل مشاعر"):
-            st.session_state.messages.append({"role": "user", "content": example3})
-            
-        if st.button("كشف لهجة"):
-            st.session_state.messages.append({"role": "user", "content": example4})
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-def process_request(user_input):
-    """Process user input and return appropriate response"""
-    user_input = user_input.strip()
-    
-    # Check for empty input
-    if not user_input:
-        return "يرجى إدخال نص للمعالجة."
-    
-    # Process translation requests
-    if user_input.startswith("ترجم"):
-        text_to_translate = user_input.replace("ترجم", "", 1).strip()
-        if text_to_translate:
-            with st.spinner("جاري الترجمة..."):
-                translation = translate_text(text_to_translate)
-            return f"**الترجمة:** \n\n{translation}"
-        else:
-            return "يرجى تقديم نص للترجمة بعد كلمة 'ترجم'."
-    
-    # Process summarization requests
-    elif user_input.startswith("لخص") or user_input.startswith("ملخص"):
-        text_to_summarize = user_input.replace("لخص", "", 1).replace("ملخص", "", 1).strip()
-        if text_to_summarize:
-            with st.spinner("جاري التلخيص..."):
-                summary = summarize_text(text_to_summarize)
-            return f"**الملخص:** \n\n{summary}"
-        else:
-            return "يرجى تقديم نص للتلخيص بعد كلمة 'لخص' أو 'ملخص'."
-    
-    # Process sentiment analysis requests
-    elif any(word in user_input for word in ["شعور", "مشاعر", "حلل"]):
-        cleaned_input = user_input
-        for term in ["شعور", "مشاعر", "حلل"]:
-            cleaned_input = cleaned_input.replace(term, "")
-        
-        text_to_analyze = cleaned_input.strip()
-        if text_to_analyze:
-            sentiment = analyze_sentiment(text_to_analyze)
-            return f"**تحليل المشاعر:** \n\n{sentiment}"
-        else:
-            return "يرجى تقديم نص لتحليل المشاعر."
-    
-    # Process dialect identification requests
-    elif "لهجة" in user_input:
-        text_to_analyze = user_input.replace("لهجة", "").strip()
-        if text_to_analyze:
-            dialect = detect_dialect(text_to_analyze)
-            return f"**اللهجة المكتشفة:** \n\n{dialect}"
-        else:
-            return "يرجى تقديم نص لتحديد اللهجة."
-    
-    # For all other queries, use the knowledge base
-    else:
-        with st.spinner("جاري البحث في قاعدة المعرفة..."):
-            response = knowledge_retrieval(user_input)
-        return f"**إجابة من قاعدة المعرفة:** \n\n{response}"
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-if __name__ == "__main__":
-    main()
+if prompt := st.chat_input("اكتب رسالتك هنا..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        placeholder.markdown("⏳ جاري التفكير...")
+
+        # Handle commands
+        response = ""
+        if prompt.startswith("ترجم"):
+            text = prompt.replace("ترجم", "").strip()
+            response = f"**الترجمة:**\n\n{translate_text(text)}"
+        elif prompt.startswith("لخص") or prompt.startswith("ملخص"):
+            text = prompt.replace("لخص", "").replace("ملخص", "").strip()
+            response = f"**الملخص:**\n\n{summarize_text(text)}"
+        elif any(word in prompt for word in ["شعور", "مشاعر", "حلل"]):
+            response = f"**تحليل المشاعر:**\n\n{analyze_sentiment(prompt)}"
+        elif "لهجة" in prompt:
+            response = f"**اللهجة المكتشفة:**\n\n{detect_dialect(prompt)}"
+        else:
+            response = f"**إجابة من قاعدة المعرفة:**\n\n{knowledge_retrieval(prompt)}"
+
+        # Simulate typing
+        for i in range(0, len(response), 10):
+            placeholder.markdown(response[:i+10])
+            time.sleep(0.05)
+
+        placeholder.markdown(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+with st.sidebar:
+    st.header("🌟 ميزات المساعد")
+    st.markdown("""
+    **يمكنني القيام بـ:**
+    - 🔤 الترجمة (تلقائي)
+    - 📝 تلخيص النصوص
+    - 💬 تحليل المشاعر
+    - 🗣️ كشف اللهجة
+    - 📚 استرجاع المعرفة
+    """)
+    
+    st.header("🧠 هل كانت الاجابة مفيدة؟")
+    st.button("👍 نعم")
+    st.button("👎 لا")
