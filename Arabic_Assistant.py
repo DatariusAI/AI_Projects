@@ -1,11 +1,14 @@
 import streamlit as st
-from transformers import pipeline, MarianMTModel, MarianTokenizer
+from transformers import MarianMTModel, MarianTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics.pairwise import cosine_similarity
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer
 import nltk
 
-# Download nltk resources
+# Download nltk data
 nltk.download('punkt')
 
 # ---------------------------
@@ -65,17 +68,21 @@ def detect_dialect(text):
     return dialect_clf.predict(dialect_vectorizer.transform([text]))[0]
 
 # ---------------------------
-# Summarization
+# Summarization (TextRank via sumy)
 # ---------------------------
-summarizer = pipeline("summarization", model="csebuetnlp/mT5_multilingual_XLSum")
+def simple_summarizer(text, num_sentences=2):
+    parser = PlaintextParser.from_string(text, Tokenizer("arabic"))
+    summarizer = LexRankSummarizer()
+    summary = summarizer(parser.document, num_sentences)
+    return " ".join([str(sentence) for sentence in summary])
 
 # ---------------------------
-# Streamlit App
+# Streamlit Web App
 # ---------------------------
 st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖")
 st.title("🤖 المساعد العربي الذكي")
 
-st.write("أهلاً بك في المساعد العربي الذكي. اكتب طلبك أو سؤالك:")
+st.write("اكتب طلبك أو سؤالك:")
 
 user_input = st.text_input("اكتب هنا:")
 
@@ -89,7 +96,7 @@ if st.button("أرسل"):
         st.write("**الترجمة:**", result)
 
     elif "ملخص" in user_input:
-        result = summarizer(user_input, max_length=40, min_length=10)[0]['summary_text']
+        result = simple_summarizer(user_input)
         st.write("**الملخص:**", result)
 
     elif "شعور" in user_input:
