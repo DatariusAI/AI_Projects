@@ -11,38 +11,18 @@ Pillow
 transformers
 torch
 tensorflow
-streamlit           # For the Streamlit web app interface
-PyPDF2              # For extracting text from PDFs (first choice)
-pdfplumber          # Alternative for PDF text extraction
-pymupdf             # Another alternative for PDF text extraction (PyMuPDF, also known as fitz)
-python-docx         # For extracting text from DOCX files
-matplotlib          # For creating and displaying the word cloud plot
-wordcloud           # For generating the word cloud
+PyPDF2
+pdfplumber
+pymupdf
+python-docx
+wordcloud
 openai
-transformers
 langchain
-torch
 langchain-community
 openpyxl
-streamlit
 sentence-transformers
-transformers
-scikit-learn
 sentencepiece
-
 faiss-cpu
-torch
-pandas
-nltk
-streamlit
-sentence-transformers
-transformers
-scikit-learn
-faiss-cpu
-torch
-pandas
 nltk
 protobuf
 sumy
-
-
