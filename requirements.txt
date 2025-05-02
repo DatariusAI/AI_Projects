@@ -43,6 +43,6 @@ torch
 pandas
 nltk
 protobuf
-
+sumy
 
 
