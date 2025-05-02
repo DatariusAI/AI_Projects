@@ -8,7 +8,7 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 import nltk
 
-# Download nltk data
+# Download NLTK resources
 nltk.download('punkt')
 
 # ---------------------------
@@ -77,12 +77,12 @@ def simple_summarizer(text, num_sentences=2):
     return " ".join([str(sentence) for sentence in summary])
 
 # ---------------------------
-# Streamlit Web App
+# Streamlit UI
 # ---------------------------
 st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖")
 st.title("🤖 المساعد العربي الذكي")
 
-st.write("اكتب طلبك أو سؤالك:")
+st.write("مرحباً! اكتب سؤالك أو طلبك:")
 
 user_input = st.text_input("اكتب هنا:")
 
