@@ -3,13 +3,14 @@ from transformers import pipeline, MarianMTModel, MarianTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics.pairwise import cosine_similarity
+from camel_tools.sentiment import SentimentAnalyzer
 import nltk
 
-# Download required nltk packages
+# Download nltk
 nltk.download('punkt')
 
 # ---------------------------
-# Knowledge Base and TF-IDF
+# Knowledge Base + TF-IDF
 # ---------------------------
 kb = ["الذكاء الاصطناعي هو فرع من علوم الحاسوب",
       "تعلم الآلة هو جزء من الذكاء الاصطناعي",
@@ -25,7 +26,7 @@ def simple_rag(query):
     return kb[best_idx]
 
 # ---------------------------
-# Machine Translation (Arabic → English)
+# Machine Translation (Arabic -> English)
 # ---------------------------
 mt_model_name = "Helsinki-NLP/opus-mt-ar-en"
 mt_tokenizer = MarianTokenizer.from_pretrained(mt_model_name)
@@ -37,9 +38,12 @@ def translate(text):
     return mt_tokenizer.decode(translated[0], skip_special_tokens=True)
 
 # ---------------------------
-# Sentiment Analysis
+# Sentiment Analysis (camel-tools)
 # ---------------------------
-sentiment_pipeline = pipeline("sentiment-analysis", model="CAMeL-Lab/bert-base-arabic-camelbert-da-sentiment")
+sentiment_analyzer = SentimentAnalyzer.pretrained()
+
+def simple_sentiment(text):
+    return sentiment_analyzer.predict(text)
 
 # ---------------------------
 # Dialect Identification
@@ -83,7 +87,7 @@ if st.button("أرسل"):
         st.write("**الملخص:**", result)
 
     elif "شعور" in user_input:
-        result = sentiment_pipeline(user_input)
+        result = simple_sentiment(user_input)
         st.write("**المشاعر:**", result)
 
     elif "لهجة" in user_input:
