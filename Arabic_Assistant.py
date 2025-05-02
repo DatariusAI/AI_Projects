@@ -68,7 +68,7 @@ def detect_dialect(text):
     return dialect_clf.predict(dialect_vectorizer.transform([text]))[0]
 
 # ---------------------------
-# Summarization (TextRank via sumy)
+# Summarization (TextRank via sumy) -> This is FIXED VERSION
 # ---------------------------
 def simple_summarizer(text, num_sentences=2):
     parser = PlaintextParser.from_string(text, Tokenizer("arabic"))
@@ -82,7 +82,7 @@ def simple_summarizer(text, num_sentences=2):
 st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖")
 st.title("🤖 المساعد العربي الذكي")
 
-st.write("مرحباً! اكتب سؤالك أو طلبك:")
+st.write("اكتب طلبك أو سؤالك:")
 
 user_input = st.text_input("اكتب هنا:")
 
