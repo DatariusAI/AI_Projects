@@ -1,28 +1,32 @@
 import streamlit as st
-from sentence_transformers import SentenceTransformer
-import numpy as np
-import faiss
 from transformers import pipeline, MarianMTModel, MarianTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics.pairwise import cosine_similarity
+import nltk
 
-# -----------------------------
-# Load Models and Prepare Data
-# -----------------------------
+# Download required nltk packages
+nltk.download('punkt')
 
-# Knowledge base
+# ---------------------------
+# Knowledge Base and TF-IDF
+# ---------------------------
 kb = ["الذكاء الاصطناعي هو فرع من علوم الحاسوب",
       "تعلم الآلة هو جزء من الذكاء الاصطناعي",
       "المعالجة الطبيعية للغة تتعامل مع النصوص واللغة"]
 
-# Sentence Transformer for RAG
-embed_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-kb_embeddings = embed_model.encode(kb).astype("float32")
+vectorizer = TfidfVectorizer()
+kb_vectors = vectorizer.fit_transform(kb)
 
-index = faiss.IndexFlatL2(kb_embeddings.shape[1])
-index.add(kb_embeddings)
+def simple_rag(query):
+    query_vec = vectorizer.transform([query])
+    similarity = cosine_similarity(query_vec, kb_vectors)
+    best_idx = similarity.argmax()
+    return kb[best_idx]
 
-# Translation
+# ---------------------------
+# Machine Translation (Arabic → English)
+# ---------------------------
 mt_model_name = "Helsinki-NLP/opus-mt-ar-en"
 mt_tokenizer = MarianTokenizer.from_pretrained(mt_model_name)
 mt_model = MarianMTModel.from_pretrained(mt_model_name)
@@ -32,29 +36,36 @@ def translate(text):
     translated = mt_model.generate(**tokens)
     return mt_tokenizer.decode(translated[0], skip_special_tokens=True)
 
+# ---------------------------
 # Sentiment Analysis
+# ---------------------------
 sentiment_pipeline = pipeline("sentiment-analysis", model="CAMeL-Lab/bert-base-arabic-camelbert-da-sentiment")
 
+# ---------------------------
 # Dialect Identification
+# ---------------------------
 dialect_texts = ["إزايك عامل إيه؟", "شلونك اليوم؟", "كيفك شو الأخبار؟"]
 dialect_labels = ["Egyptian", "Gulf", "Levantine"]
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(dialect_texts)
+dialect_vectorizer = TfidfVectorizer()
+X = dialect_vectorizer.fit_transform(dialect_texts)
 dialect_clf = MultinomialNB()
 dialect_clf.fit(X, dialect_labels)
 
+def detect_dialect(text):
+    return dialect_clf.predict(dialect_vectorizer.transform([text]))[0]
+
+# ---------------------------
 # Summarization
+# ---------------------------
 summarizer = pipeline("summarization", model="csebuetnlp/mT5_multilingual_XLSum")
 
-
-# -----------------------------
-# Streamlit Interface
-# -----------------------------
-
+# ---------------------------
+# Streamlit UI
+# ---------------------------
 st.set_page_config(page_title="المساعد العربي الذكي", page_icon="🤖")
 st.title("🤖 المساعد العربي الذكي")
 
-st.write("أهلاً بك في المساعد. اكتب استفسارك وسأقوم بمساعدتك!")
+st.write("اكتب سؤالك أو طلبك في المربع أدناه:")
 
 user_input = st.text_input("اكتب هنا:")
 
@@ -76,11 +87,9 @@ if st.button("أرسل"):
         st.write("**المشاعر:**", result)
 
     elif "لهجة" in user_input:
-        result = dialect_clf.predict(vectorizer.transform([user_input]))[0]
+        result = detect_dialect(user_input)
         st.write("**اللهجة:**", result)
 
     else:
-        query_embedding = embed_model.encode([user_input]).astype("float32")
-        D, I = index.search(query_embedding, k=1)
-        result = kb[I[0][0]]
+        result = simple_rag(user_input)
         st.write("**إجابة المعرفة:**", result)
