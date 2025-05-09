@@ -3,9 +3,3 @@ uvicorn
 langchain
 openai
 pydantic
-fastapi
-uvicorn
-langchain
-langchain-community
-openai
-pydantic
