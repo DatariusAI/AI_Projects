@@ -8,26 +8,23 @@ app = FastAPI(title="Nutrition Disorder Agent", description="Powered by Groq + M
 # Load the Groq API key
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-# Validate API key presence
 if not GROQ_API_KEY:
     raise EnvironmentError("❌ GROQ_API_KEY not found in environment variables.")
 
-# Initialize the Groq-based LLM
+# Initialize ChatGroq
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
     model="mixtral-8x7b"
 )
 
-# Input schema
+# Request schema
 class QueryInput(BaseModel):
     query: str
 
-# Health check
 @app.get("/")
 def root():
     return {"message": "✅ Nutrition Disorder Agent is live and ready!"}
 
-# Main inference endpoint
 @app.post("/ask")
 def ask_question(data: QueryInput):
     try:
