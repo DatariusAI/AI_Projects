@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Force install langchain-community BEFORE installing other requirements
+# Install langchain-community first
 RUN pip install --no-cache-dir langchain-community
 
 COPY requirements.txt .
