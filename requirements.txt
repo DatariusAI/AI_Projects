@@ -17,3 +17,7 @@ openai
 pydantic
 joblib
 scikit-learn
+pandas
+joblib
+matplotlib
+seaborn
