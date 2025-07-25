@@ -1,78 +1,82 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load the model
+# Load model
 model = joblib.load("fraud_model.joblib")
-expected_features = model.feature_names_in_
 
+# Title
 st.title("Fraud Risk Prediction App")
-st.subheader("Upload transaction data (.csv)")
+st.caption("Upload transaction data (.csv)")
 
+# File uploader
 uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     st.subheader("Uploaded Data Preview")
     st.dataframe(df.head())
 
-    # Define categorical columns
-    categorical_cols = ["time_of_day", "channel"]
+    # Categorical columns to encode
+    categorical_cols = ['time_of_day', 'channel']
     st.subheader("Preprocessing Data")
-    st.write("Categorical columns:", categorical_cols)
+    st.write("Categorical columns:")
+    st.json(categorical_cols)
+
+    # Check presence of categorical columns
+    for col in categorical_cols:
+        if col not in df.columns:
+            st.error(f"Missing column: {col}")
+            st.stop()
 
     # One-hot encode
-    df_encoded = pd.get_dummies(df, columns=categorical_cols)
+    df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
-    # Align to expected features
-    for col in expected_features:
-        if col not in df_encoded.columns:
-            df_encoded[col] = 0  # add missing column
-    df_encoded = df_encoded[expected_features]  # enforce order
+    # Align encoded columns with model input
+    expected_features = model.feature_names_in_
+    missing_cols = [col for col in expected_features if col not in df_encoded.columns]
+    for col in missing_cols:
+        df_encoded[col] = 0  # Add missing columns with 0
+    df_encoded = df_encoded[expected_features]  # Ensure correct order
 
-    # Make predictions
-    probs = model.predict_proba(df_encoded)[:, 1]
-    preds = (probs > 0.5).astype(int)
+    # Predictions
+    probs = model.predict_proba(df_encoded)[:, 1]  # Prob. of class 1 (fraud)
+    preds = (probs >= 0.5).astype(int)
 
-    df["fraud_probability"] = np.round(probs, 2)
-    df["prediction"] = preds
-    df["prediction_label"] = df["prediction"].map({1: "Fraudulent", 0: "Legitimate"})
+    # Results
+    df_results = df.copy()
+    df_results["fraud_probability"] = probs.round(2)
+    df_results["prediction"] = preds
+    label_map = {0: "Legitimate", 1: "Fraudulent"}
+    df_results["prediction_label"] = df_results["prediction"].map(label_map)
 
     st.subheader("Fraud Prediction Results")
-    st.dataframe(df)
+    st.dataframe(df_results.head(10))
 
-    # ---- Insights ----
-    st.subheader("Prediction Insights")
-
-    total = len(df)
-    fraud_count = (df["prediction"] == 1).sum()
+    # Summary insights
+    total = len(df_results)
+    fraud_count = df_results["prediction"].sum()
     legit_count = total - fraud_count
-    avg_prob = df["fraud_probability"].mean()
+    avg_prob = df_results["fraud_probability"].mean()
 
-    st.markdown(f"**Total Transactions:** {total}")
-    st.markdown(f"**Predicted Fraudulent:** {fraud_count}")
-    st.markdown(f"**Predicted Legitimate:** {legit_count}")
-    st.markdown(f"**Average Fraud Probability:** {avg_prob:.2f}")
+    st.subheader("Prediction Insights")
+    st.write(f"**Total Transactions:** {total}")
+    st.write(f"**Predicted Fraudulent:** {fraud_count}")
+    st.write(f"**Predicted Legitimate:** {legit_count}")
+    st.write(f"**Average Fraud Probability:** {avg_prob:.2f}")
 
-    # ---- Plotting ----
-    st.subheader("Visual Summary")
+    # Visualization
+    fig1, ax1 = plt.subplots()
+    sns.countplot(data=df_results, x="prediction_label", palette="Set2", ax=ax1)
+    ax1.set_title("Prediction Counts")
+    st.pyplot(fig1)
 
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+    fig2, ax2 = plt.subplots()
+    sns.histplot(df_results["fraud_probability"], bins=10, kde=True, ax=ax2)
+    ax2.set_title("Fraud Probability Distribution")
+    st.pyplot(fig2)
 
-    # Pie chart
-    labels = ['Legitimate', 'Fraudulent']
-    sizes = [legit_count, fraud_count]
-    ax[0].pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax[0].set_title("Fraud vs Legitimate")
-
-    # Histogram of probabilities
-    ax[1].hist(df["fraud_probability"], bins=10, color='skyblue', edgecolor='black')
-    ax[1].set_title("Fraud Probability Distribution")
-    ax[1].set_xlabel("Fraud Probability")
-    ax[1].set_ylabel("Count")
-
-    st.pyplot(fig)
-
-    # Download option
-    st.download_button("Download Prediction Results", df.to_csv(index=False), file_name="fraud_predictions.csv")
+    # Download link
+    csv_output = df_results.to_csv(index=False).encode("utf-8")
+    st.download_button("Download Prediction Results", csv_output, file_name="fraud_predictions.csv")
