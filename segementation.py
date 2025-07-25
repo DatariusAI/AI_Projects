@@ -1,84 +1,61 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
-from sklearn.metrics import pairwise_distances_argmin_min
 
-# --- Load model and scaler ---
-@st.cache_resource
-def load_model_and_scaler():
-    model = joblib.load("kmeans_model.joblib")
-    scaler = joblib.load("segmentation_scaler.joblib")
-    return model, scaler
+# Load model, scaler, and training feature names
+model = joblib.load("kmeans_model.joblib")
+scaler = joblib.load("segmentation_scaler.joblib")
+feature_names = joblib.load("features_used.pkl")  # <-- FIXED HERE
 
-model, scaler = load_model_and_scaler()
+# Set page config
+st.set_page_config(page_title="Customer Segmentation", layout="wide")
 
-# --- App Title ---
-st.title("Customer Segmentation App")
-st.write("Upload a CSV file with new customer data to predict their segments using KMeans.")
+st.title("🧠 Customer Segmentation App")
+st.markdown("Upload a CSV file with customer data to get cluster predictions.")
 
-# --- File Upload ---
-uploaded_file = st.file_uploader("Upload customer CSV", type=["csv"])
+# File uploader
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+
 if uploaded_file is not None:
-    # Load uploaded data
+    # Step 1: Read data
     new_data = pd.read_csv(uploaded_file)
-    st.subheader("📋 Uploaded Data Preview")
+    st.subheader("📄 Uploaded Data Preview")
     st.dataframe(new_data.head())
 
-    # Identify and one-hot encode categorical features
-    st.subheader("🔢 Processing Data")
-    categorical_cols = new_data.select_dtypes(include='object').columns.tolist()
-    st.write("Categorical columns:", categorical_cols)
-    new_data_encoded = pd.get_dummies(new_data, columns=categorical_cols, drop_first=True)
+    # Step 2: Identify and encode categorical columns
+    st.subheader("🔄 Processing Data")
 
-    # Align columns with training features
-    st.write("📏 Aligning features to match training structure...")
+    categorical_cols = ["channel_preference", "region", "gender"]
+    st.markdown("**Categorical columns:**")
+    st.code(categorical_cols)
+
     try:
-        X_columns = model.feature_names_in_  # requires sklearn >=1.0
-    except:
-        st.error("❌ Could not determine feature names. Ensure model was trained with scikit-learn >= 1.0")
-        st.stop()
+        # One-hot encode (drop first to match training)
+        new_data_encoded = pd.get_dummies(new_data, columns=categorical_cols, drop_first=True)
 
-    for col in X_columns:
-        if col not in new_data_encoded.columns:
-            new_data_encoded[col] = 0
-    new_data_encoded = new_data_encoded[X_columns]
+        # Step 3: Align columns to training structure
+        for col in feature_names:
+            if col not in new_data_encoded.columns:
+                new_data_encoded[col] = 0
 
-    # Scale new data
-    X_scaled = scaler.transform(new_data_encoded)
+        # Reorder columns
+        X_new = new_data_encoded[feature_names]
 
-    # Predict segments
-    predicted_segments = model.predict(X_scaled)
+        # Step 4: Scale data
+        X_scaled = scaler.transform(X_new)
 
-    # Compute distance to cluster centers (for confidence estimate)
-    closest, distances = pairwise_distances_argmin_min(X_scaled, model.cluster_centers_)
-    max_distance = distances.max()
-    probabilities = 1 - (distances / max_distance)
+        # Step 5: Predict clusters
+        cluster_labels = model.predict(X_scaled)
 
-    # Combine results
-    results = new_data.copy()
-    results['Predicted_Segment'] = predicted_segments
-    results['Segment_Probability'] = probabilities.round(4)
+        # Step 6: Output predictions
+        st.subheader("🎯 Predicted Customer Segments")
+        new_data["Segment"] = cluster_labels
+        st.dataframe(new_data)
 
-    # Segment descriptions (based on 4-cluster setup)
-    segment_descriptions = {
-        0: "Segment 0: Digitally Comfortable Veterans – High digital engagement",
-        1: "Segment 1: Wealthy Traditionalists – Branch-preferred users, possibly older",
-        2: "Segment 2: Product-Rich Hybrids – Mixed channels, high product ownership",
-        3: "Segment 3: Low-Value Starters – New, few products, low engagement"
-    }
+        # Download button
+        csv_output = new_data.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 Download Segmentation Results", data=csv_output, file_name="segmentation_output.csv", mime="text/csv")
 
-    results['Explanation'] = results['Predicted_Segment'].apply(
-        lambda seg: segment_descriptions.get(seg, "⚠️ Unknown segment (check model training)")
-    )
-
-    # Show output
-    st.subheader("✅ Segment Predictions")
-    st.dataframe(results[["Predicted_Segment", "Segment_Probability", "Explanation"]].head())
-
-    # Option to download results
-    st.download_button(
-        label="📥 Download Full Results as CSV",
-        data=results.to_csv(index=False).encode('utf-8'),
-        file_name='segment_predictions.csv',
-        mime='text/csv'
-    )
+    except Exception as e:
+        st.error(f"❌ An error occurred while processing: {e}")
