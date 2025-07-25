@@ -1,58 +1,84 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import pairwise_distances_argmin_min
 
-# Load model and scaler
+# --- Load model and scaler ---
 @st.cache_resource
-def load_model_scaler():
+def load_model_and_scaler():
     model = joblib.load("kmeans_model.joblib")
     scaler = joblib.load("segmentation_scaler.joblib")
     return model, scaler
 
-# Define segment explanations
-SEGMENT_EXPLANATIONS = {
-    0: "Digitally Comfortable Veterans: High digital engagement, prefers online and mobile channels.",
-    1: "Wealthy Traditionalists: Traditional users, prefer branch interaction, possibly older demographic.",
-    2: "Product-Rich Hybrids: Medium-income, high product ownership, mixed channel usage.",
-    3: "Low-Value Starters: New or low-value customers, fewer products, lower engagement."
-}
+model, scaler = load_model_and_scaler()
 
-# App layout
+# --- App Title ---
 st.title("Customer Segmentation App")
+st.write("Upload a CSV file with new customer data to predict their segments using KMeans.")
 
-uploaded_file = st.file_uploader("Upload Customer Data (CSV)", type="csv")
-if uploaded_file:
-    st.subheader("Preview of Uploaded Data")
+# --- File Upload ---
+uploaded_file = st.file_uploader("Upload customer CSV", type=["csv"])
+if uploaded_file is not None:
+    # Load uploaded data
     new_data = pd.read_csv(uploaded_file)
-    st.write(new_data.head())
+    st.subheader("📋 Uploaded Data Preview")
+    st.dataframe(new_data.head())
 
-    # Step 1: Load Model and Scaler
-    model, scaler = load_model_scaler()
-
-    # Step 2: One-hot encode categorical features
-    categorical_cols = ['gender', 'occupation', 'channel_preference', 'time_of_day']
+    # Identify and one-hot encode categorical features
+    st.subheader("🔢 Processing Data")
+    categorical_cols = new_data.select_dtypes(include='object').columns.tolist()
+    st.write("Categorical columns:", categorical_cols)
     new_data_encoded = pd.get_dummies(new_data, columns=categorical_cols, drop_first=True)
 
-    # Step 3: Align with training columns
-    expected_columns = model.feature_names_in_
-    for col in expected_columns:
+    # Align columns with training features
+    st.write("📏 Aligning features to match training structure...")
+    try:
+        X_columns = model.feature_names_in_  # requires sklearn >=1.0
+    except:
+        st.error("❌ Could not determine feature names. Ensure model was trained with scikit-learn >= 1.0")
+        st.stop()
+
+    for col in X_columns:
         if col not in new_data_encoded.columns:
             new_data_encoded[col] = 0
-    new_data_encoded = new_data_encoded[expected_columns]
+    new_data_encoded = new_data_encoded[X_columns]
 
-    # Step 4: Scale the data
-    scaled_data = scaler.transform(new_data_encoded)
+    # Scale new data
+    X_scaled = scaler.transform(new_data_encoded)
 
-    # Step 5: Predict segments
-    predictions = model.predict(scaled_data)
+    # Predict segments
+    predicted_segments = model.predict(X_scaled)
 
-    # Show predictions with explanations
-    st.subheader("Predicted Segments")
-    new_data["Predicted Segment"] = predictions
-    new_data["Segment Description"] = new_data["Predicted Segment"].map(SEGMENT_EXPLANATIONS)
-    st.write(new_data[["Predicted Segment", "Segment Description"]].head(10))
+    # Compute distance to cluster centers (for confidence estimate)
+    closest, distances = pairwise_distances_argmin_min(X_scaled, model.cluster_centers_)
+    max_distance = distances.max()
+    probabilities = 1 - (distances / max_distance)
 
-    # Optional download
-    csv = new_data.to_csv(index=False).encode('utf-8')
-    st.download_button("Download Full Prediction", csv, "segmented_customers.csv", "text/csv")
+    # Combine results
+    results = new_data.copy()
+    results['Predicted_Segment'] = predicted_segments
+    results['Segment_Probability'] = probabilities.round(4)
+
+    # Segment descriptions (based on 4-cluster setup)
+    segment_descriptions = {
+        0: "Segment 0: Digitally Comfortable Veterans – High digital engagement",
+        1: "Segment 1: Wealthy Traditionalists – Branch-preferred users, possibly older",
+        2: "Segment 2: Product-Rich Hybrids – Mixed channels, high product ownership",
+        3: "Segment 3: Low-Value Starters – New, few products, low engagement"
+    }
+
+    results['Explanation'] = results['Predicted_Segment'].apply(
+        lambda seg: segment_descriptions.get(seg, "⚠️ Unknown segment (check model training)")
+    )
+
+    # Show output
+    st.subheader("✅ Segment Predictions")
+    st.dataframe(results[["Predicted_Segment", "Segment_Probability", "Explanation"]].head())
+
+    # Option to download results
+    st.download_button(
+        label="📥 Download Full Results as CSV",
+        data=results.to_csv(index=False).encode('utf-8'),
+        file_name='segment_predictions.csv',
+        mime='text/csv'
+    )
