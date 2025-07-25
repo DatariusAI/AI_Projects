@@ -1,67 +1,81 @@
 import streamlit as st
 import pandas as pd
 import joblib
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load trained model
+# Load model and scaler
 model = joblib.load("fraud_model.joblib")
 
+# App title
 st.title("Fraud Risk Prediction App")
 st.markdown("Upload transaction data (.csv)")
 
-# File upload
+# File uploader
 uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.subheader("📄 Uploaded Data Preview")
-    st.dataframe(df)
+    st.subheader("Uploaded Data Preview")
+    st.dataframe(df.head())
 
-    # Define expected categorical columns
-    categorical_cols = ['time_of_day', 'channel']
+    # Select categorical columns that exist in uploaded file
+    expected_categoricals = ['time_of_day', 'channel']
+    categorical_cols = [col for col in expected_categoricals if col in df.columns]
 
-    st.subheader("🛠 Preprocessing Data")
+    st.subheader("Preprocessing Data")
     st.markdown("**Categorical columns:**")
-    st.write(categorical_cols)
+    st.json(categorical_cols)
 
-    # Check if columns exist before encoding
-    existing_categoricals = [col for col in categorical_cols if col in df.columns]
-    missing = list(set(categorical_cols) - set(df.columns))
+    # Encode categoricals
+    df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
-    if missing:
-        st.warning(f"⚠️ Missing expected categorical columns: {missing}")
+    # Make prediction
+    probs = model.predict_proba(df_encoded)[:, 1]  # Probability of class 1 (fraud)
+    preds = (probs >= 0.5).astype(int)
 
-    # Apply one-hot encoding only to existing columns
-    df_encoded = pd.get_dummies(df, columns=existing_categoricals, drop_first=True)
+    df_results = df.copy()
+    df_results["Fraud_Probability"] = probs.round(2)
+    df_results["Prediction"] = preds
+    df_results["Prediction_Label"] = df_results["Prediction"].map({1: "Fraudulent", 0: "Legitimate"})
 
-    # Align features to model input shape
-    model_features = model.feature_names_in_
-    for col in model_features:
-        if col not in df_encoded.columns:
-            df_encoded[col] = 0
-    df_encoded = df_encoded[model_features]
+    st.subheader("Fraud Prediction Results")
+    st.dataframe(df_results)
 
-    # Make predictions
-    st.subheader("✅ Fraud Prediction Results")
-    df['Fraud_Prediction'] = model.predict(df_encoded)
-    df['Fraud_Probability'] = model.predict_proba(df_encoded)[:, 1]
+    # Download button
+    st.download_button("Download Prediction Results", df_results.to_csv(index=False), "fraud_predictions.csv")
 
-    # Explain predictions
-    df['Prediction_Explanation'] = df['Fraud_Prediction'].apply(
-        lambda x: 'Potential Fraud - Review required' if x == 1 else 'Legitimate Transaction - No action needed'
-    )
-
-    st.dataframe(df)
-
-    # 💡 Insights Section
-    st.subheader("🧠 Prediction Insights")
-    total = len(df)
-    fraud = df['Fraud_Prediction'].sum()
+    # Insights
+    st.subheader("Prediction Insights")
+    total = len(df_results)
+    fraud = df_results["Prediction"].sum()
     legit = total - fraud
-    avg_prob = df['Fraud_Probability'].mean()
+    avg_prob = df_results["Fraud_Probability"].mean().round(2)
 
-    st.markdown(f"- Total Transactions: **{total}**")
-    st.markdown(f"- 🚨 Predicted Fraudulent: **{fraud}**")
-    st.markdown(f"- ✅ Predicted Legitimate: **{legit}**")
-    st.markdown(f"- 📊 Average Fraud Probability: **{avg_prob:.2f}**")
+    st.markdown(f"""
+    - Total Transactions: **{total}**
+    - Predicted Fraudulent: **{fraud}**
+    - Predicted Legitimate: **{legit}**
+    - Average Fraud Probability: **{avg_prob}**
+    """)
 
-    st.download_button("⬇️ Download Prediction Results", data=df.to_csv(index=False), file_name="fraud_predictions.csv", mime="text/csv")
+    # Visualizations
+    st.subheader("Visual Insights")
+
+    # Fraud distribution barplot
+    fig1, ax1 = plt.subplots()
+    sns.countplot(data=df_results, x="Prediction_Label", palette=["green", "red"], ax=ax1)
+    ax1.set_title("Transaction Classification")
+    ax1.set_ylabel("Count")
+    ax1.set_xlabel("Prediction")
+    st.pyplot(fig1)
+
+    # Scatter plot: amount vs fraud
+    if "transaction_amount" in df_results.columns:
+        fig2, ax2 = plt.subplots()
+        sns.scatterplot(data=df_results, x="transaction_amount", y="Fraud_Probability",
+                        hue="Prediction_Label", palette=["green", "red"], ax=ax2)
+        ax2.set_title("Transaction Amount vs Fraud Probability")
+        ax2.set_xlabel("Transaction Amount")
+        ax2.set_ylabel("Fraud Probability")
+        st.pyplot(fig2)
