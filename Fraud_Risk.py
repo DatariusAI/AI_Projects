@@ -1,82 +1,67 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import numpy as np
 
-# Load the model
-@st.cache_resource
-def load_model():
-    return joblib.load("fraud_model.joblib")
-
-model = load_model()
+# Load trained model
+model = joblib.load("fraud_model.joblib")
 
 st.title("Fraud Risk Prediction App")
+st.markdown("Upload transaction data (.csv)")
 
-# Upload CSV
-uploaded_file = st.file_uploader("Upload transaction data (.csv)", type=["csv"])
+# File upload
+uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
-if uploaded_file is not None:
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.subheader("Uploaded Data Preview")
-    st.dataframe(df.head())
+    st.subheader("📄 Uploaded Data Preview")
+    st.dataframe(df)
 
-    # Categorical columns
+    # Define expected categorical columns
     categorical_cols = ['time_of_day', 'channel']
-    st.subheader("Preprocessing Data")
-    st.write("Categorical columns:")
-    st.code(categorical_cols)
 
-    # Encode and align features
-    df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+    st.subheader("🛠 Preprocessing Data")
+    st.markdown("**Categorical columns:**")
+    st.write(categorical_cols)
 
-    try:
-        model_features = model.feature_names_in_
-    except AttributeError:
-        st.error("Model missing feature names. Retrain using scikit-learn ≥ 1.0.")
-        st.stop()
+    # Check if columns exist before encoding
+    existing_categoricals = [col for col in categorical_cols if col in df.columns]
+    missing = list(set(categorical_cols) - set(df.columns))
 
+    if missing:
+        st.warning(f"⚠️ Missing expected categorical columns: {missing}")
+
+    # Apply one-hot encoding only to existing columns
+    df_encoded = pd.get_dummies(df, columns=existing_categoricals, drop_first=True)
+
+    # Align features to model input shape
+    model_features = model.feature_names_in_
     for col in model_features:
         if col not in df_encoded.columns:
             df_encoded[col] = 0
+    df_encoded = df_encoded[model_features]
 
-    X = df_encoded[model_features]
+    # Make predictions
+    st.subheader("✅ Fraud Prediction Results")
+    df['Fraud_Prediction'] = model.predict(df_encoded)
+    df['Fraud_Probability'] = model.predict_proba(df_encoded)[:, 1]
 
-    # Prediction
-    preds = model.predict(X)
-    proba = model.predict_proba(X)[:, 1]
+    # Explain predictions
+    df['Prediction_Explanation'] = df['Fraud_Prediction'].apply(
+        lambda x: 'Potential Fraud - Review required' if x == 1 else 'Legitimate Transaction - No action needed'
+    )
 
-    def explain(pred, prob):
-        if pred == 1:
-            if prob > 0.9:
-                return "High Risk - Likely Fraud"
-            elif prob > 0.5:
-                return "Moderate Risk - Investigate"
-            else:
-                return "Suspicious but Uncertain"
-        else:
-            return "Legitimate Transaction"
-
-    df["Fraud_Prediction"] = preds
-    df["Fraud_Probability"] = np.round(proba, 2)
-    df["Prediction_Explanation"] = df.apply(lambda row: explain(row["Fraud_Prediction"], row["Fraud_Probability"]), axis=1)
-
-    st.subheader("Fraud Prediction Results")
     st.dataframe(df)
 
-    st.download_button("Download Prediction Results", data=df.to_csv(index=False).encode("utf-8"),
-                       file_name="fraud_predictions.csv", mime="text/csv")
-
-    # Optional: Insights
-    st.subheader("Segment-Level Insights")
+    # 💡 Insights Section
+    st.subheader("🧠 Prediction Insights")
     total = len(df)
-    frauds = df[df["Fraud_Prediction"] == 1]
-    legitimate = df[df["Fraud_Prediction"] == 0]
+    fraud = df['Fraud_Prediction'].sum()
+    legit = total - fraud
+    avg_prob = df['Fraud_Probability'].mean()
 
-    st.markdown(f"""
-    - Total Transactions: **{total}**
-    - Predicted Fraud: **{len(frauds)} ({(len(frauds)/total)*100:.1f}%)**
-    - Legitimate: **{len(legitimate)} ({(len(legitimate)/total)*100:.1f}%)**
+    st.markdown(f"- Total Transactions: **{total}**")
+    st.markdown(f"- 🚨 Predicted Fraudulent: **{fraud}**")
+    st.markdown(f"- ✅ Predicted Legitimate: **{legit}**")
+    st.markdown(f"- 📊 Average Fraud Probability: **{avg_prob:.2f}**")
 
-    **Top 5 Highest Risk Transactions:**
-    """)
-    st.dataframe(df.sort_values(by="Fraud_Probability", ascending=False).head(5)[["transaction_id", "Fraud_Probability", "Prediction_Explanation"]])
+    st.download_button("⬇️ Download Prediction Results", data=df.to_csv(index=False), file_name="fraud_predictions.csv", mime="text/csv")
