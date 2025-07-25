@@ -1,61 +1,53 @@
+# streamlit_segmentation_app.py
+
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 
-# Load model, scaler, and training feature names
-model = joblib.load("kmeans_model.joblib")
+# Load models
 scaler = joblib.load("segmentation_scaler.joblib")
-feature_names = joblib.load("features_used.pkl")  # <-- FIXED HERE
+model = joblib.load("kmeans_model.joblib")
 
-# Set page config
-st.set_page_config(page_title="Customer Segmentation", layout="wide")
-
-st.title("🧠 Customer Segmentation App")
-st.markdown("Upload a CSV file with customer data to get cluster predictions.")
+# App title
+st.title("🏷️ Customer Segmentation App")
+st.write("Upload a CSV file to predict customer segments.")
 
 # File uploader
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-if uploaded_file is not None:
-    # Step 1: Read data
-    new_data = pd.read_csv(uploaded_file)
+if uploaded_file:
+    # Step 1: Load and display input data
     st.subheader("📄 Uploaded Data Preview")
-    st.dataframe(new_data.head())
+    df = pd.read_csv(uploaded_file)
+    st.dataframe(df.head())
 
-    # Step 2: Identify and encode categorical columns
+    # Step 2: Preprocess data
     st.subheader("🔄 Processing Data")
+    categorical_cols = ['channel_preference', 'region', 'gender']
+    df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
 
-    categorical_cols = ["channel_preference", "region", "gender"]
-    st.markdown("**Categorical columns:**")
-    st.code(categorical_cols)
-
+    # Step 3: Align columns to model input
     try:
-        # One-hot encode (drop first to match training)
-        new_data_encoded = pd.get_dummies(new_data, columns=categorical_cols, drop_first=True)
+        # Ensure input columns match what the model expects
+        expected_cols = scaler.feature_names_in_
+        for col in expected_cols:
+            if col not in df_encoded.columns:
+                df_encoded[col] = 0  # Add missing cols as 0
 
-        # Step 3: Align columns to training structure
-        for col in feature_names:
-            if col not in new_data_encoded.columns:
-                new_data_encoded[col] = 0
+        df_encoded = df_encoded[expected_cols]  # Align column order
 
-        # Reorder columns
-        X_new = new_data_encoded[feature_names]
+        # Step 4: Apply scaler and predict
+        X_scaled = scaler.transform(df_encoded)
+        predictions = model.predict(X_scaled)
 
-        # Step 4: Scale data
-        X_scaled = scaler.transform(X_new)
+        # Step 5: Output results
+        st.subheader("📊 Segmentation Results")
+        df['Segment'] = predictions
+        st.dataframe(df)
 
-        # Step 5: Predict clusters
-        cluster_labels = model.predict(X_scaled)
+        # Download segmented data
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Segmented Data", csv, "segmented_customers.csv", "text/csv")
 
-        # Step 6: Output predictions
-        st.subheader("🎯 Predicted Customer Segments")
-        new_data["Segment"] = cluster_labels
-        st.dataframe(new_data)
-
-        # Download button
-        csv_output = new_data.to_csv(index=False).encode("utf-8")
-        st.download_button("📥 Download Segmentation Results", data=csv_output, file_name="segmentation_output.csv", mime="text/csv")
-
-    except Exception as e:
-        st.error(f"❌ An error occurred while processing: {e}")
+    except AttributeError:
+        st.error("❌ Could not determine feature names. Ensure model was trained with scikit-learn ≥ 1.0 and scaler was saved using `.fit()`.")
