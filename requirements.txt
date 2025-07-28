@@ -22,3 +22,4 @@ joblib
 matplotlib
 seaborn
 yfinance
+plotly
