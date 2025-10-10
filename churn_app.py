@@ -1,28 +1,50 @@
+import os
+import joblib
+import requests
+from io import BytesIO
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
 
-# ----------------------------
-# Load model and feature info
-# ----------------------------
-model = joblib.load("rf_final.joblib")
+# ==============================================================
+#                   MODEL LOADING
+# ==============================================================
+
+# Define model path (relative to this file)
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "rf_final.joblib")
+
+# Try to load locally; fall back to GitHub if missing
+try:
+    model = joblib.load(MODEL_PATH)
+except FileNotFoundError:
+    st.warning("⚠️ Local model not found — downloading from GitHub...")
+    GITHUB_RAW_URL = "https://raw.githubusercontent.com/DatariusAI/AI_Projects/main/rf_final.joblib"
+    response = requests.get(GITHUB_RAW_URL)
+    response.raise_for_status()
+    model = joblib.load(BytesIO(response.content))
+    st.success("✅ Model loaded successfully from GitHub!")
+
+# ==============================================================
+#                   MODEL FEATURES
+# ==============================================================
 
 try:
     MODEL_FEATURES = list(model.feature_names_in_)
 except AttributeError:
     MODEL_FEATURES = [
-        "Tenure","Complain_ly","cashback",
-        "CC_Agent_Score","CC_Contacted_LY",
-        "rev_growth_yoy","Service_Score"
+        "Tenure", "Complain_ly", "cashback",
+        "CC_Agent_Score", "CC_Contacted_LY",
+        "rev_growth_yoy", "Service_Score"
     ]
 
 THRESHOLDS = {"low": 0.3, "medium": 0.6, "high": 0.9}
 
-# ----------------------------
-# Data preparation helper
-# ----------------------------
+# ==============================================================
+#                   DATA PREPARATION
+# ==============================================================
+
 def prepare_input(df):
+    """Ensure consistent columns and numeric values."""
     df = df.copy()
     if "Complain_ly" in df.columns:
         df["Complain_ly"] = df["Complain_ly"].replace({"Yes": 1, "No": 0})
@@ -33,10 +55,12 @@ def prepare_input(df):
     df = df.replace([np.inf, -np.inf], 0).fillna(0)
     return df
 
-# ----------------------------
-# Classification helper
-# ----------------------------
+# ==============================================================
+#                   RISK CLASSIFICATION
+# ==============================================================
+
 def classify_risk(prob):
+    """Map probability to risk category and advisory text."""
     if prob < THRESHOLDS["low"]:
         return "🟢 Safe", "Customer loyalty strong — minimal churn risk.", "Low"
     elif prob < THRESHOLDS["medium"]:
@@ -44,10 +68,12 @@ def classify_risk(prob):
     else:
         return "🔴 High Risk", "Customer likely to churn — immediate retention action needed.", "High"
 
-# ----------------------------
-# Single Prediction
-# ----------------------------
+# ==============================================================
+#                   SINGLE PREDICTION
+# ==============================================================
+
 def predict_single(tenure, complain, cashback, agent_score, contact_count, rev_growth, service_score):
+    """Predict churn for a single customer."""
     complain_value = 1 if complain == "Yes" else 0
     df = pd.DataFrame([{
         "Tenure": tenure,
@@ -63,13 +89,16 @@ def predict_single(tenure, complain, cashback, agent_score, contact_count, rev_g
     indicator, advice, level = classify_risk(prob)
     return indicator, prob, advice, level
 
-# ----------------------------
-# Batch Prediction
-# ----------------------------
+# ==============================================================
+#                   BATCH PREDICTION
+# ==============================================================
+
 def predict_batch(file):
+    """Handle multiple customer predictions from CSV or Excel file."""
     df = pd.read_excel(file) if file.name.endswith(".xlsx") else pd.read_csv(file)
     df_prepared = prepare_input(df)
     probs = model.predict_proba(df_prepared)[:, 1]
+
     risk_labels, advice_list, levels = [], [], []
     for p in probs:
         indicator, advice, level = classify_risk(p)
@@ -84,18 +113,21 @@ def predict_batch(file):
     df = df.sort_values("Churn_Probability", ascending=False).reset_index(drop=True)
     return df
 
-# ----------------------------
-# Streamlit UI
-# ----------------------------
+# ==============================================================
+#                   STREAMLIT DASHBOARD
+# ==============================================================
+
 st.set_page_config(page_title="Customer Churn Prediction Dashboard", page_icon="📊", layout="wide")
 
 st.markdown("<h1 style='text-align:center; color:#004aad;'>📊 Customer Churn Prediction Dashboard</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>Predict churn likelihood with visual risk indicators and business guidance.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Predict churn likelihood with visual risk indicators and actionable business insights.</p>", unsafe_allow_html=True)
 
 tab1, tab2 = st.tabs(["🔹 Single Prediction", "📁 Batch Prediction"])
 
+# ---------------- Single Prediction ----------------
 with tab1:
     st.subheader("Single Customer Prediction")
+
     c1, c2 = st.columns(2)
     with c1:
         tenure = st.number_input("Tenure (months)", min_value=0, value=12)
@@ -115,11 +147,12 @@ with tab1:
         st.markdown(f"**Churn Probability:** {prob:.2f}")
         st.info(advice)
 
+# ---------------- Batch Prediction ----------------
 with tab2:
     st.subheader("Batch Prediction (CSV or Excel)")
     st.markdown("""
     Upload a CSV or Excel file containing customer data.  
-    Risk levels:
+    **Risk Levels:**
     - 🟢 **Safe:** Probability < 0.3  
     - 🟠 **Caution:** 0.3 ≤ Probability < 0.6  
     - 🔴 **High Risk:** ≥ 0.6
