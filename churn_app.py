@@ -6,7 +6,7 @@ import joblib
 # ----------------------------
 # Load model and feature info
 # ----------------------------
-model = joblib.load("/content/rf_final.joblib")
+model = joblib.load("rf_final.joblib")
 
 try:
     MODEL_FEATURES = list(model.feature_names_in_)
