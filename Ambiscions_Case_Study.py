@@ -99,7 +99,7 @@ if is_qrcode_available:
     st.header("Test Pilot App")
 
     # Generate QR Code for deployed URL
-    deployed_url = "https://kewlfunky2023-blank-app-ambiscions-case-study-teoy6m.streamlit.app/"  # Replace with your actual deployed URL
+    deployed_url = os.environ.get("STREAMLIT_DEPLOY_URL", "https://your-app.streamlit.app/")  # Configure via environment variable
     deployed_qr = qrcode.make(deployed_url)
     deployed_qr_image = deployed_qr.resize((150, 150))
 
