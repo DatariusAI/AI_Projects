@@ -61,7 +61,14 @@ def claim_status_lookup(text: str) -> str:
             f" — تاريخ آخر تحديث: {row['last_update']}"
             f" — المبلغ المطلوب: {row['amount_billed']} — المبلغ الموافق عليه: {row['amount_approved']}{extra}")
 
+# Cap user-supplied text before evaluating any regex. The router only
+# needs to recognise short conversational inputs; capping defends the
+# polynomial-time alternation in faq_router from ReDoS via long inputs.
+MAX_ROUTER_INPUT = 500
+
+
 def faq_router(text: str) -> str:
+    text = (text or "")[:MAX_ROUTER_INPUT]
     # Claims first
     if re.search(r"(حالة.*مطالب|شو.*صار.*مطالب|وين.*وصلت.*مطالب|claim|رقم.*مطالب)", text, re.I):
         return claim_status_lookup(text)
