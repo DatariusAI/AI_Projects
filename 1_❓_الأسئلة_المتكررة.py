@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils import apply_rtl, faq_examples
+from claims_utils import apply_rtl, faq_examples
 
 st.set_page_config(page_title="الأسئلة المتكررة", page_icon="❓", layout="wide")
 apply_rtl()

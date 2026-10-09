@@ -1,7 +1,7 @@
 import plotly.express as px
 import streamlit as st
 
-from utils import apply_rtl, find_claim, load_data
+from claims_utils import apply_rtl, find_claim, load_data
 
 st.set_page_config(page_title="حالة مطالبة", page_icon="📄", layout="wide")
 apply_rtl()

@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from utils import apply_rtl, get_setting, hospital_card
+from claims_utils import apply_rtl, get_setting, hospital_card
 
 st.set_page_config(page_title="إيجاد مستشفى", page_icon="🏥", layout="wide")
 apply_rtl()

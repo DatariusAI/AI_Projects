@@ -7,7 +7,7 @@ import os
 
 import streamlit as st
 
-from utils import apply_rtl, faq_router, load_data
+from claims_utils import apply_rtl, faq_router, load_data
 
 st.set_page_config(page_title="مساعد المطالبات", page_icon="🧾", layout="wide")
 
