@@ -32,3 +32,4 @@ pdfplumber
 wordcloud
 qrcode
 pillow
+groq

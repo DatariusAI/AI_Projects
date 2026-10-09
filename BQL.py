@@ -15,9 +15,22 @@ st.markdown("Interactive analysis for investment banking decision support")
 
 # --- DATA ---
 tickers = ['AAPL', 'MSFT']
-df = yf.download(tickers, start='2023-01-01', end='2024-01-01', auto_adjust=True)['Close']
-df.columns.name = None
-df.dropna(inplace=True)
+@st.cache_data(ttl=6 * 3600, show_spinner="Downloading prices from Yahoo Finance…")
+def load_prices(symbols):
+    data = yf.download(symbols, start='2023-01-01', end='2024-01-01', auto_adjust=True, progress=False)['Close']
+    data.columns.name = None
+    return data.dropna()
+
+
+try:
+    df = load_prices(tickers)
+except Exception as exc:
+    df = pd.DataFrame()
+    st.caption(f"Download error: {exc}")
+if df.empty or len(df) < 30:
+    st.error("Yahoo Finance did not return price data just now. Please refresh in a minute.")
+    load_prices.clear()
+    st.stop()
 
 # --- FEATURE ENGINEERING ---
 returns = df.pct_change().dropna()

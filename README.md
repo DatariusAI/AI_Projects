@@ -27,7 +27,7 @@ A curated collection of end-to-end AI and machine learning applications, each bu
 | 3 | **Loan Acceptance Predictor** | Predict loan approval probability based on applicant features | scikit-learn, XGBoost | `Loan_Acceptance.py` |
 | 4 | **Customer Churn Predictor** | Identify customers likely to churn with explainable predictions | scikit-learn, SHAP | `churn_app.py` |
 | 5 | **House Price Estimator** | Predict house prices with interactive feature inputs | Random Forest, XGBoost | `HousePrices streamlit app.py` |
-| 6 | **Nutrition Agent** | AI-powered nutrition analysis and meal planning agent | LangChain, OpenAI | `NutritionAgent_HF_Docker_FIXED.zip` |
+| 6 | **Nutrition Disorder Agent** | LLM chat assistant for nutrition-related disorders (Streamlit UI + FastAPI `/ask`) | Groq, FastAPI, Streamlit | `app.py` |
 | 7 | **Recommender System (GCNN)** | Graph-based recommendation engine using Graph Convolutional Networks | PyTorch, GCN | `Graded_Assignment_Project_Recommender_GCNN.py` |
 | 8 | **Customer Segmentation** | K-Means clustering for customer segmentation with visualization | scikit-learn, K-Means | `segementation.py` |
 | 9 | **Insurance Claims System** | Arabic-language insurance claims: FAQ, hospital finder, claims submission | Streamlit, pandas | `1_...py`, `2_...py`, `3_...py`, `4_...py` |

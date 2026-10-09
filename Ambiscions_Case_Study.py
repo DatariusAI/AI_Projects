@@ -70,16 +70,26 @@ if is_torch_available or is_tf_available:
     except Exception:
         is_sentiment_available = False
 
-# Set API key for OpenAI (replace 'your-api-key' with your actual API key)
-os.environ["OPENAI_API_KEY"] = "your-api-key"
 
 # Load datasets
 suffix = "https://drive.google.com/uc?id="
-sales_data = pd.read_csv(suffix + "1Lj7Zke3LHCOAqPIRwFJOrZeUbkMhyEfB", encoding='utf8')
-promotion_data = pd.read_csv(suffix + "1idK_ctZD72TDWXy10qymhQ308qniZCvH", encoding='utf8')
-customer_data = pd.read_csv(suffix + "18n8qug_i4OvRzFo1E0-pPBU6L038PH6L", encoding='utf8')
-product_data = pd.read_csv(suffix + "1NYaVT8pnypvqGRGweiwwP7TrqR4cMPNn", encoding='utf8')
-store_data = pd.read_csv(suffix + "1LIuZxAsBiEgNT0XfWkhM_YkPohEO_8uy", encoding='utf8')
+FILES = {"sales": "1Lj7Zke3LHCOAqPIRwFJOrZeUbkMhyEfB", "promotion": "1idK_ctZD72TDWXy10qymhQ308qniZCvH",
+         "customer": "18n8qug_i4OvRzFo1E0-pPBU6L038PH6L", "product": "1NYaVT8pnypvqGRGweiwwP7TrqR4cMPNn",
+         "store": "1LIuZxAsBiEgNT0XfWkhM_YkPohEO_8uy"}
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner="Loading case-study data…")
+def load_tables():
+    return {name: pd.read_csv(suffix + fid, encoding="utf8") for name, fid in FILES.items()}
+
+
+try:
+    _t = load_tables()
+except Exception as exc:
+    st.error(f"Could not load the case-study data from Google Drive ({exc}). Please refresh in a minute.")
+    st.stop()
+sales_data, promotion_data, customer_data, product_data, store_data = (
+    _t["sales"].copy(), _t["promotion"].copy(), _t["customer"].copy(), _t["product"].copy(), _t["store"].copy())
 
 # Data processing
 sales_data['Transaction_Date'] = pd.to_datetime(sales_data['Transaction_Date'])
