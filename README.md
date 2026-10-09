@@ -22,18 +22,20 @@ A curated collection of end-to-end AI and machine learning applications, each bu
 
 | # | Project | Description | Tech | File |
 |---|---------|-------------|------|------|
-| 1 | **Arabic Assistant** | Arabic-language AI assistant with conversational capabilities | LangChain, OpenAI | `Arabic_Assistant.py`, `Arabic_Assistant2025.py` |
-| 2 | **Fraud Risk Detector** | Real-time fraud risk scoring using trained ML models | scikit-learn, joblib | `Fraud_Risk.py` |
-| 3 | **Loan Acceptance Predictor** | Predict loan approval probability based on applicant features | scikit-learn, XGBoost | `Loan_Acceptance.py` |
-| 4 | **Customer Churn Predictor** | Identify customers likely to churn with explainable predictions | scikit-learn, SHAP | `churn_app.py` |
-| 5 | **House Price Estimator** | Predict house prices with interactive feature inputs | Random Forest, XGBoost | `HousePrices streamlit app.py` |
+| 1 | **Arabic Assistant** | Offline Arabic NLP toolkit (summary, sentiment, dialect, search) plus a chat version with optional LLM | scikit-learn, Groq/OpenAI (optional) | `Arabic_Assistant.py`, `Arabic_Assistant2025.py` |
+| 2 | **Fraud Risk Detector** | Single and batch fraud scoring with the decision tree's rules shown | scikit-learn (decision tree) | `Fraud_Risk.py` |
+| 3 | **Loan Acceptance Predictor** | Approval probability with a breakdown of what moved the score | scikit-learn (logistic regression) | `Loan_Acceptance.py` |
+| 4 | **Customer Churn Predictor** | Churn risk with per-customer drivers and batch scoring | scikit-learn (random forest) | `churn_app.py` |
+| 5 | **House Price Estimator** | Price estimate with a likely range and what-if charts (demo data) | scikit-learn (random forest) | `HousePrices streamlit app.py` |
 | 6 | **Nutrition Disorder Agent** | LLM chat assistant for nutrition-related disorders (Streamlit UI + FastAPI `/ask`) | Groq, FastAPI, Streamlit | `app.py` |
 | 7 | **Recommender System (Graph vs. MF)** | BPR matrix factorisation vs. LightGCN-style graph propagation, with Hit-Rate/NDCG evaluation | NumPy, BPR, LightGCN | `Graded_Assignment_Project_Recommender_GCNN.py` |
 | 8 | **Customer Segmentation** | K-Means clustering for customer segmentation with visualization | scikit-learn, K-Means | `segementation.py` |
 | 9 | **Insurance Claims System** | Arabic-language insurance claims: FAQ, hospital finder, claims submission | Streamlit, pandas | `1_...py`, `2_...py`, `3_...py`, `4_...py` |
-| 10 | **Dubai Space App** | Dubai-themed space exploration data application | Streamlit | `DubaiSpace.py` |
+| 10 | **Dubai Space App** | Space-trip booking demo with pricing, dashboard and an AI travel assistant | Streamlit, Groq/OpenAI (optional) | `DubaiSpace.py` |
 | 11 | **Ambiscions Case Study** | Business analytics case study with interactive dashboard | Streamlit, pandas | `Ambiscions_Case_Study.py` |
-| 12 | **BQL Analytics** | Business Query Language analytics tool | Streamlit | `BQL.py` |
+| 12 | **Equity Dashboard (BQL)** | Compare stocks, ARIMA forecast and a time-split direction model vs a baseline | yfinance, statsmodels, scikit-learn | `BQL.py` |
+| 13 | **Resume Keyword Analyzer** | Skill coverage of a resume with found/missing skills and a word cloud | pdfplumber, python-docx, wordcloud | `Project.py` |
+| 14 | **Portfolio Index** | Landing page linking every live Streamlit app and Hugging Face Space | Streamlit | `streamlit_app.py` |
 
 ## Pre-Trained Models
 
@@ -41,8 +43,8 @@ A curated collection of end-to-end AI and machine learning applications, each bu
 |-------|------|-----------|
 | Fraud Detection | `fraud_model.joblib` | Classification |
 | Loan Approval | `loan_model.joblib` | Classification |
-| House Prices (RF) | `rf_final.joblib` | Random Forest |
-| House Prices (XGB) | `xgb_final.joblib` | XGBoost |
+| Customer Churn (RF) | `rf_final.joblib` | Random Forest |
+| Customer Churn (XGB, unused) | `xgb_final.joblib` | XGBoost |
 | Customer Segments | `kmeans_model.joblib` | K-Means Clustering |
 | Segmentation Scaler | `segmentation_scaler.joblib` | StandardScaler |
 
