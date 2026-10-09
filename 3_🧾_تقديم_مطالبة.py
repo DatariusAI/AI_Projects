@@ -6,8 +6,10 @@ load_dotenv()
 
 st.set_page_config(page_title="Med Assist", page_icon="🏥", layout="wide")
 
-with open("assets/style.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+import os
+if os.path.exists("assets/style.css"):  # optional custom styling
+    with open("assets/style.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([2,1], vertical_alignment="center")
 with col1:

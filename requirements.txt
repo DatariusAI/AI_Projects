@@ -22,3 +22,13 @@ shap
 streamlit
 openpyxl
 requests
+python-dotenv
+sumy
+nltk
+langdetect
+PyPDF2
+python-docx
+pdfplumber
+wordcloud
+qrcode
+pillow
